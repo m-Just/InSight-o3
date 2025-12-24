@@ -34,7 +34,7 @@ We train a multimodal LLM (Qwen2.5-VL-7B) specifically for this task via RL.
 🌟 **Performance.** Our vSearcher (named **InSight-o3-vS**) empowers frontier multimodal foundation models (which serve as vReasoners), significantly improving their performance on a wide range of benchmarks including [V*-Bench](https://huggingface.co/datasets/craigwu/vstar_bench) (**73.8%** ➡️ **86.9%** for GPT-5-mini, and **80.1%** ➡️ **87.6%** for Gemini-2.5-Flash) and [O3-Bench](https://huggingface.co/datasets/m-Just/O3-Bench) (**39.0%** ➡️ **61.5%** for GPT-5-mini, and **60.4%** ➡️ **69.7%** for Gemini-2.5-Flash).
 
 ## Benchmark
-O3-Bench has two domains:&nbsp; 📊 __*composite charts*__&nbsp; and &nbsp;🗺️ __*digital maps*__.
+O3-Bench consists of two domains:&nbsp; 📊 __*composite charts*__&nbsp; and &nbsp;🗺️ __*digital maps*__.
 They are designed with two key principles in mind:
 - **High resolution & high information density.** Images are large, high-resolution, cluttered, and *information-dense*, making evidence gathering *genuinely non-trivial*.
 - **Multi-hop solution paths.** Solutions require piecing together *subtle* visual evidence from *distinct* image areas through *multi-step*, *interleaved* reasoning.
