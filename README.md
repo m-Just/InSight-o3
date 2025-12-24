@@ -103,8 +103,8 @@ Our code also supports evaluation on other datasets (including all the benchmark
 If you want to evaluate on those datasets, please follow [`data/README.md`](data/README.md) to prepare the data first.
 To reproduce the baseline results in our paper, see [`insight_o3/scripts/examples/sweep_baselines.sh`](insight_o3/scripts/examples/sweep_baselines.sh).
 
-> We currently only supports evaluating models/systems accessible via a single API call.
-The evaluation code for InSight-o3 (which involves interactions between two models) is still in preparation.
+> This code currently only supports evaluating models/systems accessible via a single API call.
+The evaluation code for InSight-o3 (which involves interactions between two models) is in preparation.
 The training code for InSight-o3 will come soon as well. Please stay tuned!
 
 ## Citation
