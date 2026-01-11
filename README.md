@@ -14,6 +14,11 @@
 
 </div>
 
+## What's new
+- [x] O3-Bench and evaluation code released!
+- [ ] InSight-o3 vSearcher model, training \& evaluation code release (coming soon!)
+- [ ] InSight-o3 training data release
+
 ---
 
 **The ability for AI agents to *"think with images"* requires a sophisticated blend of *reasoning* and *perception*.**
