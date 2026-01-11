@@ -6,6 +6,8 @@ import os
 
 from PIL import Image
 
+from openai import AsyncOpenAI
+
 from insight_o3.utils.api import query_api
 from insight_o3.utils.format import format_messages
 
@@ -66,12 +68,11 @@ def prepare_image(image_path: str, min_pixels: int | None, max_pixels: int | Non
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 
-def query_api_vqa(
+async def query_api_vqa(
     image_path: str,
     user_prompt: str,
     model: str,
-    api_key: str | None = os.getenv("OPENAI_API_KEY"),
-    base_url: str | None = os.getenv("OPENAI_BASE_URL"),
+    client: AsyncOpenAI,
     image_max_pixels: int | None = None,
     system_prompt: str | None = None,
     n: int = 1,
@@ -80,11 +81,10 @@ def query_api_vqa(
 
     image_url = f"data:image/jpeg;base64,{prepare_image(image_path, None, image_max_pixels)}"
     try:
-        query_messages, response = query_api(
+        query_messages, response = await query_api(
             query=user_prompt,
             model=model,
-            api_key=api_key,
-            base_url=base_url,
+            client=client,
             image_url=image_url,
             image_detail="high",
             context=[{"role": "system", "content": system_prompt}] if system_prompt else [],

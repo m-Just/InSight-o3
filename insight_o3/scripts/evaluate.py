@@ -1,13 +1,13 @@
 import argparse
+import asyncio
 from dataclasses import dataclass, asdict
-from functools import partial
 from pprint import pprint
-from multiprocessing import Pool
 from pathlib import Path
 from collections import defaultdict
 import re
 import json
 
+from openai import AsyncOpenAI
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -35,7 +35,13 @@ def get_eval_trial_dir(trial_id: int, args: argparse.Namespace) -> Path:
     return get_eval_dir(args) / f"trial_{trial_id}"
 
 
-def process_sample(sample: dict, args: argparse.Namespace, trial_ids: list[int]) -> list[EvalResult]:
+async def process_sample(
+    sample: dict,
+    args: argparse.Namespace,
+    trial_ids: list[int],
+    client_main: AsyncOpenAI,
+    client_judge: AsyncOpenAI,
+) -> list[EvalResult]:
     index = sample['sample_index']
     image_path = sample['image'] if 'image' in sample else sample['file_name']
     image_path = str(Path(args.img_dir) / image_path)
@@ -57,15 +63,13 @@ def process_sample(sample: dict, args: argparse.Namespace, trial_ids: list[int])
         'temperature': args.temperature,
     }
 
-    inference_results = query_api_vqa(
+    inference_results = await query_api_vqa(
         image_path=image_path,
         user_prompt=user_prompt,
         model=args.model,
-        api_key=args.api_key,
-        base_url=args.api_base_url,
+        client=client_main,
         image_max_pixels=args.img_max_pixels or None,
         system_prompt=system_prompt,
-        client_timeout=args.client_timeout,
         **chat_completion_kwargs,
     )
 
@@ -124,11 +128,10 @@ def process_sample(sample: dict, args: argparse.Namespace, trial_ids: list[int])
             )
 
         try:
-            _, response = query_api(
+            _, response = await query_api(
                 query=answer_extraction_prompt,
                 model=args.judge_model,
-                api_key=args.judge_api_key,
-                base_url=args.judge_api_base_url,
+                client=client_judge,
                 max_completion_tokens=2048,
             )
             extracted_answer = response.choices[0].message.content
@@ -161,11 +164,10 @@ def process_sample(sample: dict, args: argparse.Namespace, trial_ids: list[int])
         )
 
         try:
-            _, judge_response = query_api(
+            _, judge_response = await query_api(
                 query=judge_prompt,
                 model=args.judge_model,
-                api_key=args.judge_api_key,
-                base_url=args.judge_api_base_url,
+                client=client_judge,
                 max_completion_tokens=2048,
             )
             judge_content = judge_response.choices[0].message.content
@@ -190,7 +192,7 @@ def process_sample(sample: dict, args: argparse.Namespace, trial_ids: list[int])
     return eval_results
 
 
-def main(args: argparse.Namespace, trial_ids: list[int]):
+async def main(args: argparse.Namespace, trial_ids: list[int], client_main: AsyncOpenAI, client_judge: AsyncOpenAI):
     # Load samples
     if not Path(args.ann_file).exists():
         raise FileNotFoundError(f"Annotation file not found: {args.ann_file}")
@@ -198,27 +200,35 @@ def main(args: argparse.Namespace, trial_ids: list[int]):
     for idx, sample in enumerate(samples):
         sample['sample_index'] = idx
 
-    # Evaluate samples in parallel
+    # Evaluate samples concurrently
     trials = defaultdict(list)
-    process_func = partial(process_sample, args=args, trial_ids=trial_ids)
-    with Pool(processes=args.num_processes) as pool:
-        for i, eval_results in tqdm(
-            enumerate(pool.imap_unordered(process_func, samples)), total=len(samples), desc="Evaluating"
-        ):
-            for trial_id, eval_result in zip(trial_ids, eval_results, strict=True):
-                sample = samples[eval_result.sample_index]
-                trials[trial_id].append({**sample, 'eval_result': asdict(eval_result)})
+    semaphore = asyncio.Semaphore(args.concurrency)
 
-            if i % 10 == 0 and eval_result.success:
-                print(f"Sample index: {sample.get('sample_index')}")
-                print(f"Question id: {sample.get('question_id')}")
-                if conversations := eval_result.inference_result.conversations:
-                    print(f"Conversation(s):")
-                    for conversation in conversations:
-                        print(conversation)
-                print(f"Ground truth: {sample.get('answer')}, Predicted: {eval_result.extracted_answer}")
-                print(f"Is correct: {eval_result.is_correct}")
-                print("-" * 50)
+    async def handle_sample(sample: dict) -> tuple[int, list[EvalResult]]:
+        async with semaphore:
+            results = await process_sample(sample, args, trial_ids, client_main, client_judge)
+        return sample['sample_index'], results
+
+    tasks = [asyncio.create_task(handle_sample(sample)) for sample in samples]
+
+    for i, task in enumerate(tqdm(asyncio.as_completed(tasks), total=len(samples), desc="Evaluating")):
+        sample_index, eval_results = await task
+        sample = samples[sample_index]
+
+        for trial_id, eval_result in zip(trial_ids, eval_results, strict=True):
+            trials[trial_id].append({**sample, 'eval_result': asdict(eval_result)})
+
+        display_result = next((er for er in eval_results if er.success), None)
+        if display_result and i % 10 == 0:
+            print(f"Sample index: {sample.get('sample_index')}")
+            print(f"Question id: {sample.get('question_id')}")
+            if conversations := display_result.inference_result.conversations:
+                print(f"Conversation(s):")
+                for conversation in conversations:
+                    print(conversation)
+            print(f"Ground truth: {sample.get('answer')}, Predicted: {display_result.extracted_answer}")
+            print(f"Is correct: {display_result.is_correct}")
+            print("-" * 50)
 
     # Restore original sample order
     for trial_id, records in trials.items():
@@ -333,6 +343,28 @@ def summarize_over_trials(args: argparse.Namespace) -> dict:
     return summary
 
 
+async def run_trials(args: argparse.Namespace, trials_to_run: list[int]):
+    client_main = AsyncOpenAI(
+        api_key=args.api_key,
+        base_url=args.api_base_url,
+        timeout=args.client_timeout,
+    )
+    client_judge = AsyncOpenAI(
+        api_key=args.judge_api_key,
+        base_url=args.judge_api_base_url,
+        timeout=args.client_timeout,
+    )
+
+    try:
+        if args.separate_trial_requests:
+            for trial_id in trials_to_run:
+                await main(args, [trial_id], client_main, client_judge)
+        else:
+            await main(args, trials_to_run, client_main, client_judge)
+    finally:
+        await asyncio.gather(client_main.close(), client_judge.close())
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--eval_name', type=str, required=True, help='Name of the evaluation')
@@ -354,7 +386,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--output_dir', type=str, default='./outputs/eval', help='Path to the output root directory')
     parser.add_argument('--num_trials', type=int, default=1, help='Number of trials to run')
-    parser.add_argument('--num_processes', type=int, default=32, help='Number of processes to use')
+    parser.add_argument('--concurrency', type=int, default=128, help='Number of concurrent samples to process')
     parser.add_argument('--max_answer_length', type=int, default=1000, help='Maximum response span (in chars) to consider for answer extraction using the judge model; over-long responses will be left-cropped')
     parser.add_argument('--separate_trial_requests', action='store_true', help='Separate API requests for each trial; useful for APIs that do not accept n > 1')
     args = parser.parse_args()
@@ -388,11 +420,7 @@ if __name__ == "__main__":
     with open(eval_dir / 'args.json', 'w', encoding='utf-8') as f:
         json.dump(vars(args), f, ensure_ascii=False, indent=4)
 
-    if args.separate_trial_requests:
-        for trial_id in trials_to_run:
-            main(args, [trial_id])
-    else:
-        main(args, trials_to_run)
+    asyncio.run(run_trials(args, trials_to_run))
 
     summary_metrics = summarize_over_trials(args)
     print(f"Summary metrics over {args.num_trials} trial(s):")

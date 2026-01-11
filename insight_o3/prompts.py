@@ -8,8 +8,8 @@ SIMPLE_SYSTEM_PROMPT_THINKING = (
 )
 
 
-INSIGHT_O3_VREASONER_SYSTEM_PROMPT = """
-You are a visual assistant. Your goal is to answer a question based on an image.
+INSIGHT_O3_VREASONER_SYSTEM_PROMPT = (
+"""You are a visual assistant. Your goal is to answer a question based on an image.
 
 First, think step by step to identify which visual facts you need from the image to answer the question. If the visual information is insufficient or unclear, call the visual search tool by providing a concise region description:
 <tool_call> region_description={...} </tool_call>
@@ -46,12 +46,12 @@ Assistant:
 
 Assistant (final turn):
 <think>{final reasoning; explain why the available visual evidence is sufficient}</think>
-Answer: \\boxed{...}
-"""
+Answer: \\boxed{...}"""
+)
 
 
-GPT_EVAL_MCQA_PROMPT = """
-You are given a multiple-choice question with its options and a model-generated answer.  
+GPT_EVAL_MCQA_PROMPT = (
+"""You are given a multiple-choice question with its options and a model-generated answer.  
 Your task is to determine which option letter (A, B, C, D, E, F, etc.) best matches the model's answer.  
 
 ### Instructions
@@ -65,12 +65,12 @@ Options: {options}
 Model Answer: {model_answer}  
 
 ### Output
-<letter>
-"""
+<letter>"""
+)
 
 
-GPT_EVAL_OPEN_QA_PROMPT = """
-You are given a question and a model-generated response.  
+GPT_EVAL_OPEN_QA_PROMPT = (
+"""You are given a question and a model-generated response.  
 Your task is to extract the single word or short phrase that best matches the model's response and answer the question.
 
 ### Instructions
@@ -83,12 +83,12 @@ Question: {question}
 Model Response: {model_response}
 
 ### Output
-<answer>
-"""
+<answer>"""
+)
 
 
-GPT_JUDGE_ANSWER_PROMPT = """
-You are given an image-based question, the ground truth (GT) answer, and a model's answer.  
+GPT_JUDGE_ANSWER_PROMPT = (
+"""You are given an image-based question, the ground truth (GT) answer, and a model's answer.  
 
 Compare the model's answer with the GT answer:
 
@@ -102,5 +102,5 @@ GT Answer: {gt_answer}
 Model Answer: {model_answer}
 
 ### Output
-<correct> or <wrong>
-"""
+<correct> or <wrong>"""
+)

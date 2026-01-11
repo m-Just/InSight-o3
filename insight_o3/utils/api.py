@@ -1,9 +1,7 @@
-import os
-import random
-import time
-from pprint import pprint
+import asyncio
+from pprint import pformat
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 
 try:
@@ -39,74 +37,53 @@ def prune_non_text_content(message: dict | ChatCompletionMessage) -> dict:
     return message_pruned
 
 
-def complete_chat_with_retries(
+def _format_error_message(
+    err: Exception,
+    model: str,
+    client: AsyncOpenAI,
+    messages: list[dict],
+    show_detailed_error_message: bool = False,
+) -> str:
+    error_message = f"failed to query \"{model}\" at {client.base_url}: {repr(err)}"
+    if show_detailed_error_message:
+        error_message += f"\n  Client information:\n    {client.timeout=}\n    {client.max_retries=}"
+        formatted_input_messages = pformat([prune_non_text_content(message) for message in messages])
+        formatted_input_messages = formatted_input_messages.replace("\n", "\n    ")
+        error_message += f"\n  Input messages:\n    {formatted_input_messages}"
+    return error_message
+
+
+async def complete_chat_and_maybe_log(
     messages: list[dict],
     model: str,
-    api_key: str | None = os.getenv("OPENAI_API_KEY"),
-    base_url: str | None = os.getenv("OPENAI_BASE_URL"),
-    client_timeout: float = 600,
-
-    max_attempts: int = 3,
-    retry_initial_delay: float = 1,
-    retry_exponential_base: float = 1.5,
-    retry_jitter: bool = True,
-    retry_max_delay: float = 5,
-    retry_global_timeout: float = 60,
-    print_error=True,
-
+    client: AsyncOpenAI,
+    show_detailed_error_message: bool = False,
     **chat_completion_kwargs,
 ) -> ChatCompletion:
 
-    client = OpenAI(api_key=api_key, base_url=base_url, timeout=client_timeout)
+    assert isinstance(client, AsyncOpenAI), "client must be an instance of AsyncOpenAI"
 
-    num_attempts = 1
-    retry_delay = retry_initial_delay
-    t_start = time.time()
+    try:
+        response = await client.chat.completions.create(
+            messages=messages,
+            model=model,
+            **chat_completion_kwargs,
+        )
 
-    while True:
-        if time.time() - t_start > retry_global_timeout:
-            raise TimeoutError(f"Timeout when querying {model} at {base_url}")
+    except Exception as err:
+        raise RuntimeError(_format_error_message(err, model, client, messages, show_detailed_error_message)) from err
 
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                **chat_completion_kwargs,
-            )
+    if log_chat_completion:
+        messages_to_log = [prune_non_text_content(message) for message in messages]
+        log_chat_completion(messages_to_log, response, client.api_key, str(client.base_url))
 
-        except Exception as e:
-            if print_error:
-                print(f"Error when querying {model} at {base_url} (attempt {num_attempts}/{max_attempts}): {repr(e)}")
-                print("Relevant messages:")
-                pprint([prune_non_text_content(message) for message in messages])
-
-            # Increment attempts
-            num_attempts += 1
-
-            # Check if max attempts has been reached
-            if num_attempts > max_attempts:
-                raise RuntimeError(f"Max attempts reached when querying {model} at {base_url}") from e
-
-            # Increment the delay
-            next_delay = retry_delay * retry_exponential_base * (1 + retry_jitter * random.random())
-            retry_delay = min(next_delay, retry_max_delay)
-
-            # Sleep for the delay
-            time.sleep(retry_delay)
-            continue
-
-        if log_chat_completion:
-            messages_to_log = [prune_non_text_content(message) for message in messages]
-            log_chat_completion(messages_to_log, response, api_key, base_url)
-
-        return response
+    return response
 
 
-def query_api(
+async def query_api(
     query: str | list[dict],
     model: str,
-    api_key: str | None = os.getenv("OPENAI_API_KEY"),
-    base_url: str | None = os.getenv("OPENAI_BASE_URL"),
+    client: AsyncOpenAI,
     image_url: str | None = None,        # image url for image input
     image_detail: str = "auto",          # "low", "auto", or "high" for gpt models
     context: list[dict] | None = None,   # context messages for multi-round conversation
@@ -125,19 +102,26 @@ def query_api(
     messages = [*context] if context else []
     messages.append({"role": "user", "content": query})
 
-    return messages, complete_chat_with_retries(
+    return messages, await complete_chat_and_maybe_log(
         messages=messages,
         model=model,
-        api_key=api_key,
-        base_url=base_url,
+        client=client,
         **kwargs,
     )
 
 
 if __name__ == "__main__":
-    _, response = query_api(
-        query="What is the capital of France?",
-        model="gpt-5-nano",
-        n=1,
-    )
-    print(response)
+    async def _demo():
+        client = AsyncOpenAI()
+        try:
+            _, response = await query_api(
+                query="What is the capital of France?",
+                model="gpt-5-nano",
+                client=client,
+                n=1,
+            )
+            print(response)
+        finally:
+            await client.close()
+
+    asyncio.run(_demo())
