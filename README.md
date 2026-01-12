@@ -15,9 +15,9 @@
 </div>
 
 ## What's new
-- [x] [O3-Bench](https://huggingface.co/datasets/m-Just/O3-Bench) and evaluation code released!
-- [x] InSight-o3 vSearcher model, training \& evaluation code released!
-- [ ] InSight-o3 training data release (coming soon!)
+- [x] [2025/12/24] [O3-Bench](https://huggingface.co/datasets/m-Just/O3-Bench) and evaluation code released!
+- [x] [2026/1/12] [InSight-o3 vSearcher model](https://huggingface.co/m-Just/InSight-o3-vS), training \& evaluation code released!
+- [ ] InSight-o3 training data release (coming soon)
 
 ---
 
@@ -129,7 +129,7 @@ ray==2.53.0
 qwen-vl-utils==0.0.10
 openai==2.14.0
 ```
-using these commands:
+using the following commands:
 ```sh
 uv pip install vllm==0.10.2 --torch-backend=cu126
 uv pip install flash-attn==2.8.3 --no-build-isolation   # this may take a while
@@ -187,7 +187,7 @@ The vSearcher model will be downloaded automatically from [HuggingFace](https://
 
 ### Training
 For training, simply change the above snippet for evaluation as follows:
-1. Add `export TRAIN_FILES=<path(s) to training dataset file(s) (in parquet format)>`
+1. Add `export TRAIN_FILES='<path(s) to training dataset file(s) (in parquet format)>'`
 2. Change the launching script to `recipe/vsearch/train.sh`.
 3. Set `export NUM_VAL_TRIALS=1`.
 4. Optionally, add `export OPENAI_CLIENT_TIMEOUT=60`. This helps speed up training by reducing the waiting time for only a few lagging API requests. Increase this value if you see many API timeouts during training.
