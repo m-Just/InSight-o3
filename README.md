@@ -175,6 +175,7 @@ export API_MODEL_FOR_AGENT='<vReasoner model>'  # e.g., gpt-5-mini
 export JUDGE_MODEL='<judge model>'              # e.g., gpt-5-nano
 export OPENAI_BASE_URL='<api base url>'
 export OPENAI_API_KEY='<api key>'
+export GPT_IMAGE_MAX_AREA='<area in pixels>'    # we use 1280*1280 for GPTs and 3500*3500 for others
 # OPENAI_BASE_URL and OPENAI_API_KEY will be used for both the vReasoner and the judge model
 
 export VAL_FILES='<path(s) to evaluation dataset file(s) (in parquet format)>'
