@@ -15,9 +15,9 @@
 </div>
 
 ## What's new
-- [x] [2025/12/24] [O3-Bench](https://huggingface.co/datasets/m-Just/O3-Bench) and evaluation code released!
-- [x] [2026/1/12] [InSight-o3 vSearcher model](https://huggingface.co/m-Just/InSight-o3-vS), training \& evaluation code released!
 - [x] [2026/1/16] InSight-o3 training data released! See [VisCoT_VStar_Collage](https://huggingface.co/datasets/m-Just/VisCoT_VStar_Collage) and [InfoVQA_RegionLocalization](https://huggingface.co/datasets/m-Just/InfoVQA_RegionLocalization).
+- [x] [2026/1/12] [InSight-o3 vSearcher model](https://huggingface.co/m-Just/InSight-o3-vS), training \& evaluation code released!
+- [x] [2025/12/24] [O3-Bench](https://huggingface.co/datasets/m-Just/O3-Bench) and evaluation code released!
 
 ---
 
@@ -68,8 +68,10 @@ You can download O3-Bench with the following command if you have `git-lfs` insta
 git submodule init data/O3-Bench
 git submodule update --remote data/O3-Bench
 ```
+The downloaded data will be placed under `data/O3-Bench`.
+You can visualize them using [`notebooks/visualize_o3_bench.ipynb`](notebooks/visualize_o3_bench.ipynb).
 
-The downloaded data will be placed under `data/O3-Bench`. Then you can run the following command to evaluate your model on O3-Bench:
+To evaluate, run the following command:
 ```sh
 MODEL='<model>'
 API_BASE_URL='<api base url>'
@@ -110,13 +112,12 @@ To reproduce the baseline results in our paper, see [`insight_o3/scripts/example
 
 
 ## InSight-o3
-We use a modified [verl](https://github.com/volcengine/verl) and vLLM for both training and evaluation of InSight-o3.
-To get started, grab the modified verl codebase first:
+We use a modified [verl](https://github.com/volcengine/verl) (with [vLLM](https://github.com/vllm-project/vllm) as the inference engine) for both training and evaluation of InSight-o3.
+To get started, grab [the modified verl codebase](https://github.com/m-Just/verl-public/tree/insight_o3) first:
 ```sh
 git submodule init verl
 git submodule update --remote verl
 ```
-The codebase can also be directly accessed [here](https://github.com/m-Just/verl-public/tree/insight_o3).
 
 Then, follow the [installation guide](https://verl.readthedocs.io/en/latest/start/install.html) to install verl and its dependencies.
 We recommend installing the following packages **in these versions**:
@@ -138,13 +139,13 @@ uv pip install transformers==4.57.3 ray==2.53.0 qwen-vl-utils==0.0.10 openai==2.
 Other versions are not tested.
 
 ### Data preparation
-Download the training data with the following command:
-```
+You can download the training data with the following command:
+```sh
 git submodule init data/VisCoT_VStar_Collage data/InfoVQA_RegionLocalization
 git submodule update --remote data/VisCoT_VStar_Collage data/InfoVQA_RegionLocalization
 ```
 
-Then, use [`create_parquet_dataset.py`](verl/recipe/vsearch/create_parquet_dataset.py) to pack the downloaded datasets into [verl-compatible](https://verl.readthedocs.io/en/latest/preparation/prepare_data.html) parquet files.
+Then, use [`create_parquet_dataset.py`](https://github.com/m-Just/verl-public/blob/insight_o3/recipe/vsearch/create_parquet_dataset.py) to pack the downloaded datasets into [verl-compatible](https://verl.readthedocs.io/en/latest/preparation/prepare_data.html) parquet files.
 See **example usages** commented in `create_parquet_dataset.py` for the exact commands to pack the training/evaluation datasets.
 
 Successfully packed datasets should have these columns: `data_source`, `prompt`, `images`, `reward_model`, `extra_info`, and `agent_name`.
