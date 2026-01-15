@@ -154,8 +154,8 @@ If your dataset has ground-truth bounding boxes, put them as a list of `(x1, y1,
 
 For evaluation, set `agent_name` to `vreasoner`. For training, depending on whether the dataset is used for the in-loop or out-of-loop subagent RL, set `agent_name` to `vreasoner` or `vsearcher`, respectively.
 
-### Evaluation
-After preparing the data, you can run evaluation with the following code snippet:
+### Training
+After preparing the data, you can start training with the following code snippet:
 ```sh
 # Start at the project root dir and add it to PYTHONPATH
 export PYTHONPATH="$(pwd):$PYTHONPATH"
@@ -163,46 +163,49 @@ export PYTHONPATH="$(pwd):$PYTHONPATH"
 # Go inside verl and set things up
 cd verl
 export VERL_PROJ_DIR="$(pwd)"
-export MODEL_PATH='m-Just/InSight-o3-vS'
+export MODEL_PATH='Qwen/Qwen2.5-VL-7B-Instruct'
 
 export WORK_DIR='<root path for saving logs, checkpoints, etc.>'
 export PROJECT_NAME='my_project'
 export EXP_NAME='my_experiment'
-export EVAL_NAME='my_eval'
-# outputs will be saved under "$WORK_DIR/val_results/$PROJECT_NAME/$EXP_NAME/$EVAL_NAME" by default
+# outputs will be saved under "$WORK_DIR/ckpts/$PROJECT_NAME/$EXP_NAME" by default
 
 export API_MODEL_FOR_AGENT='<vReasoner model>'  # e.g., gpt-5-mini
-# agent configuration: `recipe/vsearch/config/agent_${API_MODEL_FOR_AGENT}.yaml`
+# agent configuration at `recipe/vsearch/config/agent_${API_MODEL_FOR_AGENT}.yaml`
 export JUDGE_MODEL='<judge model>'              # e.g., gpt-5-nano
 export OPENAI_BASE_URL='<api base url>'
 export OPENAI_API_KEY='<api key>'
-# OPENAI_BASE_URL and OPENAI_API_KEY will be used for both the vReasoner and the judge model
+export OPENAI_CLIENT_TIMEOUT=60  # prevent laggy API requests from slowing down training
+# `OPENAI_*` settings will be applied to both the vReasoner and the judge model
+# Increase `OPENAI_CLIENT_TIMEOUT` if you see many API timeouts during training
 
-export VAL_FILES='<path(s) to evaluation dataset file(s) (in parquet format)>'
-export NUM_VAL_TRIALS='<number of evaluation trials to run>'
+export TRAIN_FILES='<path(s) to training dataset file(s) (in parquet format)>'
+export VAL_FILES='<path(s) to validation dataset file(s) (in parquet format)>'
 # multiple dataset files can be concatenated as follows: '[/path/to/dateset_A,/path/to/dateset_B]'
 
-bash recipe/vsearch/val.sh
+bash recipe/vsearch/train.sh
 ```
-The vSearcher model will be downloaded automatically from [HuggingFace](https://huggingface.co/m-Just/InSight-o3-vS).
 
-Since the evaluation is based on API, **there will be randomness in the results** (the fluctuation can be huge sometimes).
-We recommend setting `NUM_VAL_TRIALS` to at least 3 and computing the average for more reliable results.
-
-### Training
-For training, simply change the above snippet for evaluation as follows:
-- Add `export TRAIN_FILES='<path(s) to training dataset file(s) (in parquet format)>'`.
-- Change `MODEL_PATH` if needed (e.g., to `Qwen/Qwen2.5-VL-7B-Instruct`).
-- Change the launching script to `recipe/vsearch/train.sh`.
-- Set `NUM_VAL_TRIALS=1`.
-- Optionally, add `export OPENAI_CLIENT_TIMEOUT=60`. This helps speed up training by reducing the waiting time for laggy API requests. Increase this value if you see many API timeouts during training.
-
-The current training script uses the two training datasets introduced in our paper, mixed with 1:1 ratio as can be seen from the following part of `recipe/vsearch/train.sh`:
+The current training script uses the two training datasets introduced in our paper.
+They are mixed in 1:1 ratio as can be seen from the following part of `recipe/vsearch/train.sh`:
 ```
   +data.batch_sampler.weights.info_vqa_region_localization=0.5 \
   +data.batch_sampler.weights.merged_compound=0.5 \
 ```
 To use your own training datasets, you need to replace the name after `+data.batch_sampler.weights.` with the name you put in the `data_source` field of your training data parquet files.
+
+### Evaluation
+For evaluation, simply change the above snippet for training as follows:
+- Change the launching script to `recipe/vsearch/val.sh`.
+- Remove `export OPENAI_CLIENT_TIMEOUT=60` for more patience.
+- Change `MODEL_PATH` if needed (e.g., to [`m-Just/InSight-o3-vS`](https://huggingface.co/m-Just/InSight-o3-vS) for our vSearcher model).
+- Change `VAL_FILES` if needed.
+- Optionally, add `export NUM_VAL_TRIALS='<number of evaluation trials to run>'`.
+
+HuggingFace models specified by `MODEL_PATH` will be downloaded automatically when you run the evaluation.
+
+Since the evaluation is partly based on API, **there will be randomness in the results** (the fluctuation can be huge sometimes).
+We recommend setting `NUM_VAL_TRIALS` to at least 3 and computing the average for more reliable results.
 
 **Notes:** More detailed configurations for training and evaluation can be found in `recipe/vsearch/_base.sh` and `recipe/vsearch/config/qwen_2_5_vl_7b_async.yaml`. Feel free to open issues if there's anything unclear!
 
