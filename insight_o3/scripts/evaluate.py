@@ -59,8 +59,7 @@ async def process_sample(
 
     chat_completion_kwargs = {
         'n': len(trial_ids),
-        'max_completion_tokens': args.max_completion_tokens or None,
-        'temperature': args.temperature,
+        **args.chat_completion_kwargs,
     }
 
     inference_results = await query_api_vqa(
@@ -69,6 +68,7 @@ async def process_sample(
         model=args.model,
         client=client_main,
         image_max_pixels=args.img_max_pixels or None,
+        image_url_extra_settings=args.image_url_extra_settings,
         system_prompt=system_prompt,
         **chat_completion_kwargs,
     )
@@ -376,11 +376,11 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, required=True, help='Model to use')
     parser.add_argument('--api_base_url', type=str, required=True, help='API base URL')
     parser.add_argument('--api_key', type=str, required=True, help='API key')
-    parser.add_argument('--img_max_pixels', type=int, default=3500 * 3500, help='Input image maximum number of pixels; set to 0 to remove the limit')
+    parser.add_argument('--img_max_pixels', type=int, default=3500 * 3500, help='Resize images to be at most this many pixels before sending to the API; set to 0 to remove the limit')
     parser.add_argument('--sys_prompt', type=str, default='model_default', choices=['model_default', 'think'], help='System prompt to use')
-    parser.add_argument('--max_completion_tokens', type=int, default=16384, help='Maximum completion tokens; set to 0 to use model default')
-    parser.add_argument('--temperature', type=float, default=None, help='Temperature')
+    parser.add_argument('--chat_completion_kwargs', type=json.loads, default={"max_completion_tokens": 16384}, help='Additional kwargs for chat completion API (e.g. \'{"max_completion_tokens": 16384, "temperature": 0.7}\')')
     parser.add_argument('--client_timeout', type=int, default=600, help='OpenAI client timeout in seconds')
+    parser.add_argument('--image_url_extra_settings', type=json.loads, default={"detail": "high"}, help='Extra settings for image_url (e.g. \'{"detail": "high"}\')')
 
     parser.add_argument('--judge_model', type=str, default='gpt-5-nano', help='Judge model to use')
     parser.add_argument('--judge_api_base_url', type=str, required=True, help='Judge model API base URL')
@@ -392,6 +392,9 @@ if __name__ == "__main__":
     parser.add_argument('--max_answer_length', type=int, default=1000, help='Maximum response span (in chars) to consider for answer extraction using the judge model; over-long responses will be left-cropped')
     parser.add_argument('--separate_trial_requests', action='store_true', help='Separate API requests for each trial; useful for APIs that do not accept n > 1')
     args = parser.parse_args()
+
+    if 'n' in args.chat_completion_kwargs:
+        raise ValueError("'n' cannot be set in chat_completion_kwargs; it is controlled by --num_trials")
 
     print(f"Running evaluation: {args.eval_name}")
     print("Evaluation arguments:")

@@ -1,13 +1,33 @@
 import asyncio
+import os
 from pprint import pformat
+from typing import Union
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
+from openai._types import NOT_GIVEN, Timeout, NotGiven
+from openai._utils import is_given
 
 try:
     from .api_logger import log_chat_completion
 except ImportError:
     log_chat_completion = None
+
+
+def create_async_openai_client(
+    api_key: str | None = None,
+    base_url: str | None = None,
+    timeout: Union[float, Timeout, None, NotGiven] = NOT_GIVEN,
+) -> AsyncOpenAI:
+    if api_key is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+    if base_url is None:
+        base_url = os.getenv("OPENAI_BASE_URL")
+    if not is_given(timeout):
+        timeout = os.getenv("OPENAI_CLIENT_TIMEOUT", NOT_GIVEN)
+        if isinstance(timeout, str):
+            timeout = float(timeout)
+    return AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
 
 def prune_non_text_content(message: dict | ChatCompletionMessage) -> dict:
@@ -84,9 +104,9 @@ async def query_api(
     query: str | list[dict],
     model: str,
     client: AsyncOpenAI,
-    image_url: str | None = None,        # image url for image input
-    image_detail: str = "auto",          # "low", "auto", or "high" for gpt models
-    context: list[dict] | None = None,   # context messages for multi-round conversation
+    image_url: str | None = None,                 # image url for image input
+    image_url_extra_settings: dict | None = None, # extra settings for image_url (e.g. {"detail": "high"})
+    context: list[dict] | None = None,            # context messages for multi-round conversation
     **kwargs,
 ) -> tuple[list[dict], ChatCompletion]:
 
@@ -96,7 +116,7 @@ async def query_api(
     if image_url is not None:
         query.insert(0, {
             "type": "image_url",
-            "image_url": {"url": image_url, "detail": image_detail},
+            "image_url": {"url": image_url, **(image_url_extra_settings or {})},
         })
 
     messages = [*context] if context else []
