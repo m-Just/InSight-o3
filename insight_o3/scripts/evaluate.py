@@ -8,13 +8,14 @@ import re
 import json
 
 from openai import AsyncOpenAI
+from openai._types import NOT_GIVEN
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
 import insight_o3.prompts as prompts
 from insight_o3.inference import query_api_vqa, InferenceResult
-from insight_o3.utils.api import query_api
+from insight_o3.utils.api import create_async_openai_client, query_api
 
 
 @dataclass
@@ -344,15 +345,15 @@ def summarize_over_trials(args: argparse.Namespace) -> dict:
 
 
 async def run_trials(args: argparse.Namespace, trials_to_run: list[int]):
-    client_main = AsyncOpenAI(
+    client_main = create_async_openai_client(
         api_key=args.api_key,
         base_url=args.api_base_url,
-        timeout=args.client_timeout,
+        timeout=NOT_GIVEN if args.client_timeout is None else args.client_timeout,
     )
-    client_judge = AsyncOpenAI(
+    client_judge = create_async_openai_client(
         api_key=args.judge_api_key,
         base_url=args.judge_api_base_url,
-        timeout=args.client_timeout,
+        timeout=NOT_GIVEN if args.client_timeout is None else args.client_timeout,
     )
 
     try:
@@ -378,9 +379,9 @@ if __name__ == "__main__":
     parser.add_argument('--api_key', type=str, required=True, help='API key')
     parser.add_argument('--img_max_pixels', type=int, default=3500 * 3500, help='Resize images to be at most this many pixels before sending to the API; set to 0 to remove the limit')
     parser.add_argument('--sys_prompt', type=str, default='model_default', choices=['model_default', 'think'], help='System prompt to use')
-    parser.add_argument('--chat_completion_kwargs', type=json.loads, default={"max_completion_tokens": 16384}, help='Additional kwargs for chat completion API (e.g. \'{"max_completion_tokens": 16384, "temperature": 0.7}\')')
-    parser.add_argument('--client_timeout', type=int, default=600, help='OpenAI client timeout in seconds')
-    parser.add_argument('--image_url_extra_settings', type=json.loads, default={"detail": "high"}, help='Extra settings for image_url (e.g. \'{"detail": "high"}\')')
+    parser.add_argument('--chat_completion_kwargs', type=json.loads, default={"max_completion_tokens": 16384}, help='Additional kwargs for chat completion API (default: \'{"max_completion_tokens": 16384}\')')
+    parser.add_argument('--client_timeout', type=int, default=None, help='OpenAI client timeout in seconds; if not provided, the default timeout will be used')
+    parser.add_argument('--image_url_extra_settings', type=json.loads, default={"detail": "high"}, help='Extra settings for image_url (default: \'{"detail": "high"}\')')
 
     parser.add_argument('--judge_model', type=str, default='gpt-5-nano', help='Judge model to use')
     parser.add_argument('--judge_api_base_url', type=str, required=True, help='Judge model API base URL')
