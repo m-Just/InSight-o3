@@ -15,6 +15,7 @@
 </div>
 
 ## What's new
+- [x] [2026/1/26] Our paper has been accepted by ICLR 2026! 🥳
 - [x] [2026/1/16] InSight-o3 training data released! See [VisCoT_VStar_Collage](https://huggingface.co/datasets/m-Just/VisCoT_VStar_Collage) and [InfoVQA_RegionLocalization](https://huggingface.co/datasets/m-Just/InfoVQA_RegionLocalization).
 - [x] [2026/1/12] [InSight-o3 vSearcher model](https://huggingface.co/m-Just/InSight-o3-vS), training \& evaluation code released!
 - [x] [2025/12/24] [O3-Bench](https://huggingface.co/datasets/m-Just/O3-Bench) and evaluation code released!
@@ -231,10 +232,10 @@ More detailed configurations for training and evaluation can be found in `recipe
 
 If you find our work useful, please consider citing:
 ```
-@article{li2025insighto3,
+@inproceedings{li2026insight_o3,
   title={InSight-o3: Empowering Multimodal Foundation Models with Generalized Visual Search},
   author={Kaican Li and Lewei Yao and Jiannan Wu and Tiezheng Yu and Jierun Chen and Haoli Bai and Lu Hou and Lanqing Hong and Wei Zhang and Nevin L. Zhang},
-  journal={arXiv preprint arXiv:2512.18745},
-  year={2025}
+  booktitle={The Fourteenth International Conference on Learning Representations},
+  year={2026}
 }
 ```
