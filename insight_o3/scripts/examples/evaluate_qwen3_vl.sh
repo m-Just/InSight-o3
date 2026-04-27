@@ -6,7 +6,7 @@ API_BASE_URL='http://localhost:8000/v1'
 API_KEY='None'
 
 # Use the model itself as the judge model
-# This is only for demonstration; in practice, you may want to use a more reliable judge model like `gpt-5-nano`
+# This is only for demonstration; in practice, you may want to use a more consistent judge model like `gpt-5-nano`
 JUDGE_MODEL="$MODEL"
 JUDGE_API_BASE_URL="$API_BASE_URL"
 JUDGE_API_KEY="$API_KEY"

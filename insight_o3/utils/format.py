@@ -1,5 +1,28 @@
 
-def format_messages(messages: list[dict], omit_image_data: bool = True, omit_system_prompt: bool = True) -> str:
+def middle_truncate(text: str, max_chars: int = 1000) -> str:
+    """Return *text* as-is if short enough, otherwise keep the first and last
+    ``max_chars // 2`` characters with a truncation marker in between."""
+    if len(text) <= max_chars:
+        return text
+    keep = max_chars // 2
+    omitted = len(text) - 2 * keep
+    return f"{text[:keep]}\n... [{omitted} chars truncated] ...\n{text[-keep:]}"
+
+
+def _format_reasoning(message: dict, max_chars: int) -> str:
+    """Extract and format the reasoning field of a message, if present."""
+    reasoning = message.get("reasoning") or message.get("reasoning_content")
+    if not reasoning:
+        return ""
+    return f"--- reasoning ---\n{middle_truncate(str(reasoning), max_chars)}\n--- end reasoning ---\n"
+
+
+def format_messages(
+    messages: list[dict],
+    omit_image_data: bool = True,
+    omit_system_prompt: bool = True,
+    max_reasoning_chars: int = 1000,
+) -> str:
     s = ""
 
     for message in messages:
@@ -7,6 +30,8 @@ def format_messages(messages: list[dict], omit_image_data: bool = True, omit_sys
         if role == 'SYSTEM' and omit_system_prompt:
             continue
         s += f'[{role}]\n'
+
+        s += _format_reasoning(message, max_reasoning_chars)
 
         if 'content' not in message:
             s += f"<content missing>\n"

@@ -8,6 +8,23 @@ SIMPLE_SYSTEM_PROMPT_THINKING = (
 )
 
 
+QWEN_AGENT_ANALYSIS_PROMPT = (
+  "Your role is that of a research assistant specializing in visual information. "
+  "Answer questions about images by looking at them closely and then using research tools. "
+  "Please follow this structured thinking process and show your work.\n\n"
+  "Start an iterative loop for each question:\n\n"
+  "- **First, look closely:** Begin with a detailed description of the image, "
+  "paying attention to the user's question. List what you can tell just by looking, "
+  "and what you'll need to look up.\n"
+  "- **Next, find information:** Use a tool to research the things you need to find out.\n"
+  "- **Then, review the findings:** Carefully analyze what the tool tells you "
+  "and decide on your next action.\n\n"
+  "Continue this loop until your research is complete.\n\n"
+  "To finish, bring everything together in a clear, synthesized answer "
+  "that fully responds to the user's question."
+)
+
+
 INSIGHT_O3_VREASONER_SYSTEM_PROMPT = (
 """You are a visual assistant. Your goal is to answer a question based on an image.
 

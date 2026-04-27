@@ -105,6 +105,7 @@ async def query_api(
     model: str,
     client: AsyncOpenAI,
     image_url: str | None = None,                 # image url for image input
+    image_urls: list[str] | None = None,          # image urls for multi-image input
     image_url_extra_settings: dict | None = None, # extra settings for image_url (e.g. {"detail": "high"})
     context: list[dict] | None = None,            # context messages for multi-round conversation
     **kwargs,
@@ -113,11 +114,21 @@ async def query_api(
     if isinstance(query, str):
         query = [{"type": "text", "text": query}]
 
-    if image_url is not None:
-        query.insert(0, {
-            "type": "image_url",
-            "image_url": {"url": image_url, **(image_url_extra_settings or {})},
-        })
+    if image_url is not None and image_urls is not None:
+        raise ValueError("Provide either image_url or image_urls, not both")
+
+    if image_urls is None and image_url is not None:
+        image_urls = [image_url]
+
+    if image_urls is not None:
+        image_content = [
+            {
+                "type": "image_url",
+                "image_url": {"url": current_image_url, **(image_url_extra_settings or {})},
+            }
+            for current_image_url in image_urls
+        ]
+        query = [*image_content, *query]
 
     messages = [*context] if context else []
     messages.append({"role": "user", "content": query})
@@ -132,7 +143,7 @@ async def query_api(
 
 if __name__ == "__main__":
     async def _demo():
-        client = AsyncOpenAI()
+        client = create_async_openai_client()
         try:
             _, response = await query_api(
                 query="What is the capital of France?",
