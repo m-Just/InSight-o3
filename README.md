@@ -24,7 +24,7 @@
 
 **The ability for AI agents to *"think with images"* requires a sophisticated blend of *reasoning* and *perception*.**
 In our work, "[InSight-o3: Empowering Multimodal Foundation Models with Generalized Visual Search](https://arxiv.org/abs/2512.18745)":
-- We introduce **O3-Bench**, a new benchmark for multimodal reasoning with interleaved attention to visual details. It tests how well an AI agent can truly "think with images".
+- We introduce **O3-Bench**, a new multimodal reasoning benchmark that evaluates visual search, fine-grained perception, and multi-hop reasoning over high-resolution digital maps and composite charts. It tests how well an AI agent can truly "think with images" with interleaved attention to visual details. 
 - We propose **InSight-o3**, a multi-agent framework consisting of a visual reasoning agent (__*vReasoner*__) and a visual search agent (__*vSearcher*__), to address the challenge presented by O3-Bench through task decomposition and specialization.
 
 > The name, "InSight-o3", reflects its dual role: providing deeper *insight* into multimodal semantics while bringing the target region *in sight* through precise localization with vSearcher.
